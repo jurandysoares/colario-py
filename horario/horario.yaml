@@ -1,0 +1,17 @@
+instituicao:
+  nome: Instituto Federal do Rio Grande do Norte
+  sigla: IFRN
+  campus:
+    nome: Parnamirim
+    sigla: PAR
+  diretoria:
+    nome: Diretoria Acadêmica
+    sigla: DIAC
+  semestre:
+    ano: 2022
+    periodo: 1
+
+validade:
+  ini: 2022-05-16
+  fim: 2022-09-02
+

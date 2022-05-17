@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
 from glob import glob
 import os
 import pathlib
@@ -8,12 +9,31 @@ import subprocess
 import sys
 
 from slugify import slugify
+import yaml
 
 programa = {
     'separar_pdf': 'pdfseparate',
     'transformar_pdf_em_txt': 'pdftotext',
     'transformar_pdf_em_svg': 'pdf2svg',
 }
+
+def atualizar_hoje():
+    data_hoje = datetime.now().date()
+
+    arq_conf = pathlib.Path('horario.yaml')
+    if arq_conf.exists():
+        with arq_conf.open(mode='r', encoding='utf-8') as man_arq_conf:
+            confs_horario = yaml.safe_load(man_arq_conf)
+            data_ini = confs_horario['validade']['ini']
+            data_fim = confs_horario['validade']['fim']
+            assert data_fim >= data_ini
+
+            dif_datas = (data_hoje-data_ini).days
+            
+            return 0==dif_datas
+
+    return False    
+
 
 class FatiadorPDF:
     '''
@@ -97,6 +117,9 @@ class FatiadorPDF:
         
 def main():
 
+    if not atualizar_hoje():
+        sys.exit(1)
+
     for formato in ['pdf', 'txt', 'svg', 'md']:
         if os.path.exists(formato): 
             shutil.rmtree(formato)
@@ -104,7 +127,7 @@ def main():
     categorias = ['professor', 'sala', 'turma']
     plural_categoria = {
         'professor': 'Professores',
-        'sala': 'Salas',
+        'sala': 'Salas e laboratórios',
         'turma': 'Turmas',
     }
 
@@ -133,6 +156,8 @@ def main():
                 indice.write(f'{elemento}\n')
 
             indice.write('\n```')
+
+    sys.exit(0)
 
 if __name__ == '__main__':
     main()
