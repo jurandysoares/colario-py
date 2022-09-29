@@ -6,4 +6,5 @@
 professor/index
 sala/index
 turma/index
+calendario/index
 ```

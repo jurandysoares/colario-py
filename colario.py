@@ -117,8 +117,8 @@ class FatiadorPDF:
         
 def main():
 
-    if not atualizar_hoje():
-        sys.exit(1)
+    # if not atualizar_hoje():
+    #     sys.exit(1)
 
     for formato in ['pdf', 'txt', 'svg', 'md']:
         if os.path.exists(formato): 
