@@ -7,6 +7,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import tempfile
 
 from slugify import slugify
 import yaml
@@ -86,10 +87,11 @@ class FatiadorPDF:
 
     def _gerar_md(self):
         self._dir_md.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(self._dir_svg, self._dir_md_img)
+        self._dir_md_img.mkdir(parents=True, exist_ok=True)
 
         os.chdir(self._dir_txt)
         txts = glob('*.txt')
+        tmp_dir = pathlib.Path(tempfile.gettempdir())
 
         for txt in txts:
             with open(txt, mode='r', encoding='utf-8') as man_arq_txt:
@@ -98,10 +100,10 @@ class FatiadorPDF:
                 slug = slugify(titulo)
                 self.membros[slug] = titulo
                 nome_arq = txt[:-4]
-                svg_orig = self._dir_md_img / f'{nome_arq}.svg'
-                svg_dest = self._dir_md_img / f'{slug}.svg'
-                os.rename(svg_orig, svg_dest)
-
+                svg_orig = self._dir_svg / f'{nome_arq}.svg'
+                shutil.copy(svg_orig, tmp_dir)
+                os.rename(tmp_dir/f'{nome_arq}.svg', tmp_dir/f'{slug}.svg')
+                shutil.copy(tmp_dir/f'{slug}.svg', self._dir_md_img)
                 md = self._dir_md / f'{slug}.md'
 
                 with open(md, mode='w', encoding='utf-8') as man_arq_md:
