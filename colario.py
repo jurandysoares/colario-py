@@ -10,12 +10,14 @@ import sys
 import tempfile
 
 from slugify import slugify
+import tabula
 import yaml
 
 programa = {
     'separar_pdf': 'pdfseparate',
     'transformar_pdf_em_txt': 'pdftotext',
     'transformar_pdf_em_svg': 'pdf2svg',
+    'transformar_pdf_em_png': 'pdftoppm',
 }
 
 def atualizar_hoje():
@@ -48,16 +50,21 @@ class FatiadorPDF:
         self.membros = {}
         
         self._dir_raiz = pathlib.Path(os.getcwd())
-        self._dir_pdf = self._dir_raiz / 'pdf' / categoria
-        self._dir_txt = self._dir_raiz / 'txt' / categoria
-        self._dir_svg = self._dir_raiz / 'svg' / categoria
+        self._dir_csv = self._dir_raiz / 'csv' / categoria
         self._dir_md = self._dir_raiz / 'md' / categoria
         self._dir_md_img = self._dir_raiz / 'md' / 'imagens' / categoria
+        self._dir_pdf = self._dir_raiz / 'pdf' / categoria
+        self._dir_png = self._dir_raiz / 'png' / categoria
+        self._dir_svg = self._dir_raiz / 'svg' / categoria
+        self._dir_txt = self._dir_raiz / 'txt' / categoria
         
         self._separar_paginas()
         self._gerar_txt()
         self._gerar_svg()
+        self._gerar_csv()
+        self._gerar_png()
         self._gerar_md()
+        
         
         os.chdir(self._dir_raiz)
         
@@ -75,6 +82,25 @@ class FatiadorPDF:
         for f in pdfs:
             cmd = f'{programa["transformar_pdf_em_txt"]} pdf/{self.categoria}/{f} txt/{self.categoria}/{f[:-4]}.txt'
             subprocess.run(cmd.split())
+
+    def _gerar_png(self):
+        self._dir_png.mkdir(parents=True, exist_ok=True)
+        os.chdir(self._dir_pdf)
+        pdfs = glob('*.pdf')
+        for f in pdfs:
+            nome_arq = f[:-4]
+            dest = self._dir_png / f'{nome_arq}.png'
+            cmd = f'{programa["transformar_pdf_em_png"]} {f} {dest} -png'
+            subprocess.run(cmd.split())
+
+    def _gerar_csv(self):
+        self._dir_csv.mkdir(parents=True, exist_ok=True)
+        os.chdir(self._dir_pdf)
+        pdfs = glob('*.pdf')
+        for f in pdfs:
+            nome_arq = f[:-4]
+            dest = self._dir_csv / f'{nome_arq}.csv'
+            tabula.convert_into(f, str(dest), output_format='csv', pages='all')
 
     def _gerar_svg(self):
         self._dir_svg.mkdir(parents=True, exist_ok=True)
@@ -122,7 +148,7 @@ def main():
     # if not atualizar_hoje():
     #     sys.exit(1)
 
-    for formato in ['pdf', 'txt', 'svg', 'md']:
+    for formato in ['pdf', 'txt', 'svg', 'md', 'png', 'csv']:
         if os.path.exists(formato): 
             shutil.rmtree(formato)
 
