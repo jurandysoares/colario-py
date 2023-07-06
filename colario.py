@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from glob import glob
+import logging
 import os
 import pathlib
 import shutil
@@ -57,14 +58,30 @@ class FatiadorPDF:
         self._dir_png = self._dir_raiz / 'png' / categoria
         self._dir_svg = self._dir_raiz / 'svg' / categoria
         self._dir_txt = self._dir_raiz / 'txt' / categoria
-        
+
+        logging.info(msg=f'[{self.categoria}] Separando as páginas...')
         self._separar_paginas()
+        logging.info(msg=f'[{self.categoria}] Páginas separadas.')
+
+        logging.info(msg=f'[{self.categoria}] Gerando arquivos TXT...')
         self._gerar_txt()
+        logging.info(msg=f'[{self.categoria}] Arquivos TXT gerados.')        
+
+        logging.info(msg=f'[{self.categoria}] Gerando arquivos SVG...')
         self._gerar_svg()
+        logging.info(msg=f'[{self.categoria}] Arquivos SVG gerados.')
+
+        logging.info(msg=f'[{self.categoria}] Gerando arquivos CSV...')
         self._gerar_csv()
+        logging.info(msg=f'[{self.categoria}] Arquivos CSV gerados.')
+
+        logging.info(f'[{self.categoria}] Gerando arquivos PNG...')
         self._gerar_png()
-        self._gerar_md()
+        logging.info(msg=f'[{self.categoria}] Arquivos PNG gerados.')
         
+        logging.info(msg=f'[{self.categoria}] Gerando arquivos MD...')
+        self._gerar_md()
+        logging.info(msg=f'[{self.categoria}] Arquivos MD gerados.')
         
         os.chdir(self._dir_raiz)
         
@@ -89,8 +106,8 @@ class FatiadorPDF:
         pdfs = glob('*.pdf')
         for f in pdfs:
             nome_arq = f[:-4]
-            dest = self._dir_png / f'{nome_arq}.png'
-            cmd = f'{programa["transformar_pdf_em_png"]} {f} {dest} -png'
+            dest = self._dir_png / f'{nome_arq}'            
+            cmd = f'{programa["transformar_pdf_em_png"]} -singlefile -png {f} {dest}'
             subprocess.run(cmd.split())
 
     def _gerar_csv(self):
@@ -117,7 +134,7 @@ class FatiadorPDF:
 
         os.chdir(self._dir_txt)
         txts = glob('*.txt')
-        tmp_dir = pathlib.Path(tempfile.gettempdir())
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
 
         for txt in txts:
             with open(txt, mode='r', encoding='utf-8') as man_arq_txt:
@@ -126,27 +143,53 @@ class FatiadorPDF:
                 slug = slugify(titulo)
                 self.membros[slug] = titulo
                 nome_arq = txt[:-4]
+
                 svg_orig = self._dir_svg / f'{nome_arq}.svg'
-                shutil.copy(svg_orig, tmp_dir)
-                os.rename(tmp_dir/f'{nome_arq}.svg', tmp_dir/f'{slug}.svg')
+                png_orig = self._dir_png / f'{nome_arq}.png'
+                pdf_orig = self._dir_pdf / f'{nome_arq}.pdf'
+                txt_orig = self._dir_txt / f'{nome_arq}.txt'
+                csv_orig = self._dir_csv / f'{nome_arq}.csv'
+
+                shutil.copy(svg_orig, tmp_dir/f'{slug}.svg')
+                shutil.copy(png_orig, tmp_dir/f'{slug}.png')
+                shutil.copy(pdf_orig, tmp_dir/f'{slug}.pdf')
+                shutil.copy(txt_orig, tmp_dir/f'{slug}.txt')
+                shutil.copy(csv_orig, tmp_dir/f'{slug}.csv')
+                
                 shutil.copy(tmp_dir/f'{slug}.svg', self._dir_md_img)
+                shutil.copy(tmp_dir/f'{slug}.png', self._dir_md_img)
+                shutil.copy(tmp_dir/f'{slug}.pdf', self._dir_md_img)
+                shutil.copy(tmp_dir/f'{slug}.txt', self._dir_md_img)
+                shutil.copy(tmp_dir/f'{slug}.csv', self._dir_md_img)
+                
                 md = self._dir_md / f'{slug}.md'
 
                 with open(md, mode='w', encoding='utf-8') as man_arq_md:
-                    man_arq_md.write(f'''\
-
-({slug})=
+                    conteudo_md = f'''\
+({self.categoria}:{slug})=
 
 # {titulo}
 
-![Horário de {titulo}](../imagens/{self.categoria}/{slug}.svg)
+```{{figure}} ../imagens/{self.categoria}/{slug}.svg
+---
+width: 100%
+align: center
+alt: Horário de {self.categoria.capitalize()} {titulo}
+name: fig:{self.categoria}:{slug}
+---
+```
 
-''')
-        
+'''
+                    print(conteudo_md)
+                    man_arq_md.write(conteudo_md)
+        shutil.rmtree(path=tmp_dir)
+
 def main():
 
     # if not atualizar_hoje():
     #     sys.exit(1)
+
+    # logging.basicConfig(level=logging.INFO)
 
     for formato in ['pdf', 'txt', 'svg', 'md', 'png', 'csv']:
         if os.path.exists(formato): 
