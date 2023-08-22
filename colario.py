@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from datetime import datetime
+from dataclasses import dataclass
 from glob import glob
 import logging
 import os
@@ -14,12 +15,20 @@ from slugify import slugify
 import tabula
 import yaml
 
-programa = {
-    'separar_pdf': 'pdfseparate',
-    'transformar_pdf_em_txt': 'pdftotext',
-    'transformar_pdf_em_svg': 'pdf2svg',
-    'transformar_pdf_em_png': 'pdftoppm',
+cmd_tmpl = {
+    'pdf2pdfs': 'pdfseparate {arq_pdf} {pag_pdf_padrao}',
+    'pdf2txt': 'pdftotext -layout {arq_pdf} {arq_alvo}.txt',
+    'pdf2svg': 'pdf2svg {arq_pdf} {arq_alvo}.svg',
+    'pdf2png': 'pdftoppm -png -singlefile {arq_pdf} {arq_alvo}',
 }
+
+@dataclass
+class MembroCategoria:
+    slug: str
+    nome: str
+    texto_horario: str
+    categoria: str
+
 
 def atualizar_hoje():
     data_hoje = datetime.now().date()
@@ -45,190 +54,142 @@ class FatiadorPDF:
     '''
     
     def __init__(self, categoria: str):
-        
-        self.caminho_arquivo = pathlib.Path(f'{categoria}.pdf')
-        self.categoria = categoria
-        self.membros = {}
-        
+
         self._dir_raiz = pathlib.Path(os.getcwd())
-        self._dir_csv = self._dir_raiz / 'csv' / categoria
-        self._dir_md = self._dir_raiz / 'md' / categoria
-        self._dir_md_img = self._dir_raiz / 'md' / 'imagens' / categoria
-        self._dir_pdf = self._dir_raiz / 'pdf' / categoria
-        self._dir_png = self._dir_raiz / 'png' / categoria
-        self._dir_svg = self._dir_raiz / 'svg' / categoria
-        self._dir_txt = self._dir_raiz / 'txt' / categoria
+        self.categoria = categoria
+        self.membros = {}        
+        self.caminho_arquivo = self._dir_raiz/f'{categoria}.pdf'
 
-        logging.info(msg=f'[{self.categoria}] Separando as páginas...')
+        self._dir_ext = {
+            'csv': self._dir_raiz / 'csv' / categoria,
+            'md': self._dir_raiz / 'md' / categoria,
+            'pdf': self._dir_raiz / 'pdf' / categoria,
+            'png': self._dir_raiz / 'png' / categoria,
+            'svg': self._dir_raiz / 'svg' / categoria,
+            'txt': self._dir_raiz / 'txt' / categoria,
+        }
+
         self._separar_paginas()
-        logging.info(msg=f'[{self.categoria}] Páginas separadas.')
-
-        logging.info(msg=f'[{self.categoria}] Gerando arquivos TXT...')
-        self._gerar_txt()
-        logging.info(msg=f'[{self.categoria}] Arquivos TXT gerados.')        
-
-        logging.info(msg=f'[{self.categoria}] Gerando arquivos SVG...')
-        self._gerar_svg()
-        logging.info(msg=f'[{self.categoria}] Arquivos SVG gerados.')
-
-        logging.info(msg=f'[{self.categoria}] Gerando arquivos CSV...')
-        self._gerar_csv()
-        logging.info(msg=f'[{self.categoria}] Arquivos CSV gerados.')
-
-        logging.info(f'[{self.categoria}] Gerando arquivos PNG...')
-        self._gerar_png()
-        logging.info(msg=f'[{self.categoria}] Arquivos PNG gerados.')
-        
-        logging.info(msg=f'[{self.categoria}] Gerando arquivos MD...')
-        self._gerar_md()
-        logging.info(msg=f'[{self.categoria}] Arquivos MD gerados.')
-        
-        os.chdir(self._dir_raiz)
-        
+                
     def _separar_paginas(self):
-        self._dir_pdf.mkdir(parents=True, exist_ok=True)
-        os.chdir(self._dir_pdf)
-        cmd = f'{programa["separar_pdf"]} ../../{self.caminho_arquivo.name} {self.categoria}-%d.pdf'
-        subprocess.run(cmd.split())
-
-    def _gerar_txt(self):
-        self._dir_txt.mkdir(parents=True, exist_ok=True)
-        os.chdir(self._dir_pdf)
-        pdfs = glob('*.pdf')
-        os.chdir(self._dir_raiz)
-        for f in pdfs:
-            cmd = f'{programa["transformar_pdf_em_txt"]} pdf/{self.categoria}/{f} txt/{self.categoria}/{f[:-4]}.txt'
+        with tempfile.TemporaryDirectory() as temp_dir:
+            logging.info(f'Diretório temporário: {temp_dir}')
+            cwd = os.getcwd()
+            os.chdir(temp_dir)
+            cmd = cmd_tmpl["pdf2pdfs"].format(arq_pdf=self.caminho_arquivo, pag_pdf_padrao=f'{self.categoria}-%02d.pdf')
             subprocess.run(cmd.split())
 
-    def _gerar_png(self):
-        self._dir_png.mkdir(parents=True, exist_ok=True)
-        os.chdir(self._dir_pdf)
-        pdfs = glob('*.pdf')
-        for f in pdfs:
-            nome_arq = f[:-4]
-            dest = self._dir_png / f'{nome_arq}'            
-            cmd = f'{programa["transformar_pdf_em_png"]} -singlefile -png {f} {dest}'
-            subprocess.run(cmd.split())
+            arqs_pdf = glob('*.pdf')
+            for ext in ('pdf', 'txt', 'png', 'svg'):
+                self._dir_ext[ext].mkdir(parents=True, exist_ok=True)
 
-    def _gerar_csv(self):
-        self._dir_csv.mkdir(parents=True, exist_ok=True)
-        os.chdir(self._dir_pdf)
-        pdfs = glob('*.pdf')
-        for f in pdfs:
-            nome_arq = f[:-4]
-            dest = self._dir_csv / f'{nome_arq}.csv'
-            tabula.convert_into(f, str(dest), output_format='csv', pages='all')
+            for nome_arq_pdf in arqs_pdf:
+                nome_arq = nome_arq_pdf[:-4]
+                nome_arq_txt = f'{nome_arq_pdf[:-4]}.txt'
 
-    def _gerar_svg(self):
-        self._dir_svg.mkdir(parents=True, exist_ok=True)
-        os.chdir(self._dir_pdf)
-        pdfs = glob('*.pdf')
-        os.chdir(self._dir_raiz)
-        for f in pdfs:
-            cmd = f'{programa["transformar_pdf_em_svg"]} pdf/{self.categoria}/{f} svg/{self.categoria}/{f[:-4]}.svg'
-            subprocess.run(cmd.split())
-
-    def _gerar_md(self):
-        self._dir_md.mkdir(parents=True, exist_ok=True)
-        self._dir_md_img.mkdir(parents=True, exist_ok=True)
-
-        os.chdir(self._dir_txt)
-        txts = glob('*.txt')
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-
-        for txt in txts:
-            with open(txt, mode='r', encoding='utf-8') as man_arq_txt:
-                texto = man_arq_txt.read().splitlines()
-                titulo = texto[0].replace('Professor ', '') if self.categoria == 'professor' else texto[0]
-                slug = slugify(titulo)
-                self.membros[slug] = titulo
-                nome_arq = txt[:-4]
-
-                svg_orig = self._dir_svg / f'{nome_arq}.svg'
-                png_orig = self._dir_png / f'{nome_arq}.png'
-                pdf_orig = self._dir_pdf / f'{nome_arq}.pdf'
-                txt_orig = self._dir_txt / f'{nome_arq}.txt'
-                csv_orig = self._dir_csv / f'{nome_arq}.csv'
-
-                shutil.copy(svg_orig, tmp_dir/f'{slug}.svg')
-                shutil.copy(png_orig, tmp_dir/f'{slug}.png')
-                shutil.copy(pdf_orig, tmp_dir/f'{slug}.pdf')
-                shutil.copy(txt_orig, tmp_dir/f'{slug}.txt')
-                shutil.copy(csv_orig, tmp_dir/f'{slug}.csv')
-                
-                shutil.copy(tmp_dir/f'{slug}.svg', self._dir_md_img)
-                shutil.copy(tmp_dir/f'{slug}.png', self._dir_md_img)
-                shutil.copy(tmp_dir/f'{slug}.pdf', self._dir_md_img)
-                shutil.copy(tmp_dir/f'{slug}.txt', self._dir_md_img)
-                shutil.copy(tmp_dir/f'{slug}.csv', self._dir_md_img)
-                
-                md = self._dir_md / f'{slug}.md'
-
-                with open(md, mode='w', encoding='utf-8') as man_arq_md:
-                    conteudo_md = f'''\
-({self.categoria}:{slug})=
-
-# {titulo}
-
-```{{figure}} ../imagens/{self.categoria}/{slug}.svg
----
-width: 100%
-align: center
-alt: Horário de {self.categoria.capitalize()} {titulo}
-name: fig:{self.categoria}:{slug}
----
-```
-
-'''
-                    print(conteudo_md)
-                    man_arq_md.write(conteudo_md)
-        shutil.rmtree(path=tmp_dir)
-
-def main():
-
-    # if not atualizar_hoje():
-    #     sys.exit(1)
-
-    # logging.basicConfig(level=logging.INFO)
-
-    for formato in ['pdf', 'txt', 'svg', 'md', 'png', 'csv']:
-        if os.path.exists(formato): 
-            shutil.rmtree(formato)
-
-    categorias = ['professor', 'sala', 'turma']
-    plural_categoria = {
-        'professor': 'Professores',
-        'sala': 'Salas e laboratórios',
-        'turma': 'Turmas',
-    }
-
-    global catalogo
-    catalogo = {}
-               
-    if len(sys.argv) == 2:
-        caminho = pathlib.Path(sys.argv[1])
+                for ext in ('txt', 'png', 'svg'):
+                    cmd = cmd_tmpl[f'pdf2{ext}'].format(arq_pdf=nome_arq_pdf, arq_alvo=nome_arq)
+                    subprocess.run(cmd.split())
         
-    for cat in categorias:
-        catalogo[cat] = FatiadorPDF(cat)
-        arq_indice = catalogo[cat]._dir_md / 'index.md'
+                with open(file=nome_arq_txt, mode='r', encoding='utf-8') as arq_txt:
+                    texto = arq_txt.read()
+                    linhas = texto.splitlines()
+                    if self.categoria == 'professor':
+                        10 == 'Professor '
+                        nome = linhas[0].strip()[10:]
+                    else:
+                        nome = linhas[0].strip()
+                    
+                    slug = slugify(nome)
+                    novo_membro = MembroCategoria(
+                        slug=slug,
+                        nome=nome,
+                        texto_horario=texto,
+                        categoria=self.categoria
+                    )
+                    self.membros[slug] = novo_membro
 
-        with arq_indice.open(mode='w', encoding='utf-8') as indice:
-            plural = plural_categoria[cat]
-            indice.write(f'''\
-({cat})=
+                    for ext in ('txt', 'pdf', 'png', 'svg'):
+                        shutil.copy(f'{nome_arq}.{ext}', self._dir_ext[ext]/f'{slug}.{ext}')
 
-# {plural}
+            os.chdir(cwd)
 
-```{{toctree}}
-:maxdepth: 1
+                
+#                 md = self._dir_md / f'{slug}.md'
 
-''')
-            for elemento in sorted(catalogo[cat].membros):
-                indice.write(f'{elemento}\n')
+#                 with open(md, mode='w', encoding='utf-8') as man_arq_md:
+#                     conteudo_md = f'''\
+# ({self.categoria}:{slug})=
 
-            indice.write('\n```')
+# # {titulo}
 
-    sys.exit(0)
+# ```{{figure}} ../_static/img/{self.categoria}/{slug}.svg
+# ---
+# width: 100%
+# align: center
+# alt: Horário de {self.categoria.capitalize()} {titulo}
+# name: fig:{self.categoria}:{slug}
+# ---
+# ```
 
-if __name__ == '__main__':
-    main()
+# '''
+#                     print(conteudo_md)
+#                     man_arq_md.write(conteudo_md)
+#         shutil.rmtree(path=tmp_dir)
+
+# def main():
+
+#     # if not atualizar_hoje():
+#     #     sys.exit(1)
+
+#     logging.basicConfig(level=logging.INFO)
+
+#     for formato in ['pdf', 'txt', 'svg', 'md', 'png', 'csv']:
+#         if os.path.exists(formato): 
+#             shutil.rmtree(formato)
+
+#     categorias = ['professor', 'sala', 'turma']
+#     plural_categoria = {
+#         'professor': 'Professores',
+#         'sala': 'Salas e laboratórios',
+#         'turma': 'Turmas',
+#     }
+
+#     global catalogo
+#     catalogo = {}
+               
+#     if len(sys.argv) == 2:
+#         caminho = pathlib.Path(sys.argv[1])
+        
+#     for cat in categorias:
+#         catalogo[cat] = FatiadorPDF(cat)
+#         arq_indice = catalogo[cat]._dir_md / 'index.md'
+
+#         with arq_indice.open(mode='w', encoding='utf-8') as indice:
+#             plural = plural_categoria[cat]
+#             indice.write(f'''\
+# ({cat})=
+
+# # {plural}
+
+# ```{{toctree}}
+# :maxdepth: 1
+
+# ''')
+#             for elemento in sorted(catalogo[cat].membros):
+#                 indice.write(f'{elemento}\n')
+
+#             indice.write('\n```')
+
+#     sys.exit(0)
+
+# if __name__ == '__main__':
+#     main()
+
+logging.basicConfig(level=logging.INFO)
+
+for formato in ['pdf', 'txt', 'svg', 'md', 'png', 'csv']:
+    if os.path.exists(formato): 
+        shutil.rmtree(formato)
+
+membros_categoria = {categoria:FatiadorPDF(categoria).membros for categoria in ('professor', 'sala', 'turma')}
