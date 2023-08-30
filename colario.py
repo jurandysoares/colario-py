@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-from datetime import datetime
+import argparse
+import csv
+from datetime import date, datetime
 from dataclasses import dataclass
 from glob import glob
 import logging
@@ -36,10 +38,13 @@ class MembroCategoria:
     categoria: str
 
 
-def atualizar_hoje():
+def atualizar_site(pdf_dir, www_dir):
     data_hoje = datetime.now().date()
 
-    arq_conf = pathlib.Path('horario.yaml')
+    arq_conf = pathlib.Path(pdf_dir/'horario.yaml')
+    arq_turma = pathlib.Path(pdf_dir/'turma.pdf')
+    arq_index = pathlib.Path(www_dir/'index.html')
+
     if arq_conf.exists():
         with arq_conf.open(mode='r', encoding='utf-8') as man_arq_conf:
             confs_horario = yaml.safe_load(man_arq_conf)
@@ -49,10 +54,29 @@ def atualizar_hoje():
 
             dif_datas = (data_hoje-data_ini).days
             
-            return 0==dif_datas
+            return 0==dif_datas # TODO: Qual é a data do arquivo "index.html"?
+    else:
+        datahora_index = datetime.fromtimestamp(arq_index.stat().st_mtime)
+        datahora_turma = datetime.fromtimestamp(arq_turma.stat().st_mtime)
+        return datahora_index < datahora_turma
 
     # return False
     return True # Só para passar pelo teste
+
+def carrega_abreviacoes(categoria: str) -> dict:
+    cam_arq = pathlib.Path(os.getcwd()) / 'abrev' / f'{categoria}.csv'
+    with cam_arq.open(mode='r', encoding='utf-8') as arq_abrev:
+        leitor = csv.DictReader(arq_abrev)
+        nome_abrev = {linha['Abreviacao']:linha['Nome'] for linha in leitor}
+        return nome_abrev
+
+
+def carrega_turmas_professores() -> dict:
+    cam_arq = pathlib.Path(os.getcwd()) / 'abrev' / 'professor.csv'
+    with cam_arq.open(mode='r', encoding='utf-8') as arq_prof:
+        leitor = csv.DictReader(arq_prof)
+        turmas_prof = {slugify(linha['Nome']):linha['Turmas'].split(', ') for linha in leitor}
+        return turmas_prof
 
 
 class FatiadorPDF:
@@ -175,7 +199,22 @@ name: fig:{self.categoria}:{slug}
 
 
 def main():
-    if not atualizar_hoje():
+    ana_args = argparse.ArgumentParser()
+    ana_args.add_argument('diretorio_pdf', help='Diretório onde se encontram os arquivos PDF com horários')
+    ana_args.add_argument('diretorio_www', help='Diretório para publicação dos horários na Web')
+    args = ana_args.parse_args()
+
+    dir_horarios = pathlib.Path(args.diretorio_pdf)
+    ls_pdf = dir_horarios.glob('*.pdf')
+
+    dir_www = pathlib.Path(args.diretorio_www)
+
+    assert dir_horarios.is_dir() and dir_www.is_dir()
+    assert all([arq_pdf in ls_pdf for arq_pdf in ('professor.pdf', 'sala.pdf', 'turma.pdf')])
+    assert 'index.html' in dir_www.glob('index.html')
+  
+    os.chdir(dir_horarios)
+    if not atualizar_site(dir_horarios, dir_www):
         sys.exit(1)
 
     logging.basicConfig(level=logging.INFO)
