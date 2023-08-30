@@ -3,3 +3,7 @@
 
 # Build do Sphinx
 _build/
+
+# Arquivos PDF
+*.pdf
+
