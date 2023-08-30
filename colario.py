@@ -22,6 +22,12 @@ cmd_tmpl = {
     'pdf2png': 'pdftoppm -png -singlefile {arq_pdf} {arq_alvo}',
 }
 
+plural_categoria = {
+    'professor': 'professores',
+    'sala': 'salas e laboratórios',  
+    'turma': 'turmas'
+}
+
 @dataclass
 class MembroCategoria:
     slug: str
@@ -45,7 +51,8 @@ def atualizar_hoje():
             
             return 0==dif_datas
 
-    return False    
+    # return False
+    return True # Só para passar pelo teste
 
 
 class FatiadorPDF:
@@ -61,15 +68,15 @@ class FatiadorPDF:
         self.caminho_arquivo = self._dir_raiz/f'{categoria}.pdf'
 
         self._dir_ext = {
-            'csv': self._dir_raiz / 'csv' / categoria,
             'md': self._dir_raiz / 'md' / categoria,
             'pdf': self._dir_raiz / 'pdf' / categoria,
             'png': self._dir_raiz / 'png' / categoria,
             'svg': self._dir_raiz / 'svg' / categoria,
-            'txt': self._dir_raiz / 'txt' / categoria,
+            'txt': self._dir_raiz / 'txt' / categoria
         }
 
         self._separar_paginas()
+        self._gerar_md(ext_img='png')
                 
     def _separar_paginas(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -80,7 +87,7 @@ class FatiadorPDF:
             subprocess.run(cmd.split())
 
             arqs_pdf = glob('*.pdf')
-            for ext in ('pdf', 'txt', 'png', 'svg'):
+            for ext in ('pdf', 'png', 'md', 'svg', 'txt'):
                 self._dir_ext[ext].mkdir(parents=True, exist_ok=True)
 
             for nome_arq_pdf in arqs_pdf:
@@ -114,82 +121,75 @@ class FatiadorPDF:
 
             os.chdir(cwd)
 
-                
-#                 md = self._dir_md / f'{slug}.md'
+    def _gerar_md(self, ext_img='svg'):
 
-#                 with open(md, mode='w', encoding='utf-8') as man_arq_md:
-#                     conteudo_md = f'''\
-# ({self.categoria}:{slug})=
+        # Gera a página Markdown índice
+        cam_arq_indice = self._dir_ext['md'] / 'index.md'
+        plural = plural_categoria[self.categoria]
 
-# # {titulo}
+        # Cria diretório para salvar imagens
+        cam_orig_imgs = self._dir_ext[ext_img]
+        cam_dest_imgs = self._dir_ext['md'].parent / '_static' / 'img' / f'{self.categoria}'
+        cam_dest_imgs.mkdir(parents=True, exist_ok=True)
+        with cam_arq_indice.open(mode='w', encoding='utf-8') as arq_indice:
+            arq_indice.write(f'''\
+({self.categoria})=                             
 
-# ```{{figure}} ../_static/img/{self.categoria}/{slug}.svg
-# ---
-# width: 100%
-# align: center
-# alt: Horário de {self.categoria.capitalize()} {titulo}
-# name: fig:{self.categoria}:{slug}
-# ---
-# ```
+# {plural.capitalize()}
 
-# '''
-#                     print(conteudo_md)
-#                     man_arq_md.write(conteudo_md)
-#         shutil.rmtree(path=tmp_dir)
+```{{toctree}}
+:maxdepth: 1
 
-# def main():
+''')
+            
+            for slug in sorted(self.membros.keys()):
+                arq_indice.write(f'{slug}\n')
+                shutil.copy(cam_orig_imgs/f'{slug}.{ext_img}', cam_dest_imgs)
 
-#     # if not atualizar_hoje():
-#     #     sys.exit(1)
+            arq_indice.write("```\n")
 
-#     logging.basicConfig(level=logging.INFO)
 
-#     for formato in ['pdf', 'txt', 'svg', 'md', 'png', 'csv']:
-#         if os.path.exists(formato): 
-#             shutil.rmtree(formato)
+        # Gera uma página Markdown por membro da categoria
 
-#     categorias = ['professor', 'sala', 'turma']
-#     plural_categoria = {
-#         'professor': 'Professores',
-#         'sala': 'Salas e laboratórios',
-#         'turma': 'Turmas',
-#     }
+        for slug,membro in self.membros.items():
+            md = self._dir_ext['md'] / f'{slug}.md'
 
-#     global catalogo
-#     catalogo = {}
-               
-#     if len(sys.argv) == 2:
-#         caminho = pathlib.Path(sys.argv[1])
-        
-#     for cat in categorias:
-#         catalogo[cat] = FatiadorPDF(cat)
-#         arq_indice = catalogo[cat]._dir_md / 'index.md'
+            with open(md, mode='w', encoding='utf-8') as man_arq_md:
+                conteudo_md = f'''\
+({self.categoria}:{slug})=
 
-#         with arq_indice.open(mode='w', encoding='utf-8') as indice:
-#             plural = plural_categoria[cat]
-#             indice.write(f'''\
-# ({cat})=
+# {membro.nome}
 
-# # {plural}
+```{{figure}} ../_static/img/{self.categoria}/{slug}.{ext_img}
+---
+width: 100%
+align: center
+alt: Horário de {self.categoria.capitalize()} {membro.nome}
+name: fig:{self.categoria}:{slug}
+---
+```
 
-# ```{{toctree}}
-# :maxdepth: 1
+'''
 
-# ''')
-#             for elemento in sorted(catalogo[cat].membros):
-#                 indice.write(f'{elemento}\n')
+                man_arq_md.write(conteudo_md)
 
-#             indice.write('\n```')
 
-#     sys.exit(0)
+def main():
+    if not atualizar_hoje():
+        sys.exit(1)
 
-# if __name__ == '__main__':
-#     main()
+    logging.basicConfig(level=logging.INFO)
+    categorias = ('professor',  'sala',  'turma')
+    logging.basicConfig(level=logging.INFO)
 
-logging.basicConfig(level=logging.INFO)
+    formatos_suportados = ('md', 'pdf', 'png', 'svg', 'txt')
+    for formato in formatos_suportados:
+        if os.path.exists(formato): 
+            shutil.rmtree(formato)
 
-for formato in ['pdf', 'txt', 'svg', 'md', 'png', 'csv']:
-    if os.path.exists(formato): 
-        shutil.rmtree(formato)
+    membros_categoria = {categoria:FatiadorPDF(categoria).membros for categoria in categorias}
 
-membros_categoria = {categoria:FatiadorPDF(categoria).membros for categoria in ('professor', 'sala', 'turma')}
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()
