@@ -18,11 +18,11 @@
 # -- Project information -----------------------------------------------------
 
 project = 'IFRN/PAR: Horário Acadêmico'
-copyright = '2022, Henrique Coelho em colaboração com Jurandy Soares'
+copyright = '2023.1, Henrique Coelho em colaboração com Jurandy Soares'
 author = 'Henrique Coelho em colaboração com Jurandy Soares'
 
 # The full version, including alpha/beta/rc tags
-release = '2022'
+release = '2023.1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -59,6 +59,7 @@ html_theme = 'sphinx_rtd_theme'
 html_favicon = 'favicon.ico'
 html_show_sourcelink = False
 html_show_sphinx = False
+html_title = html_short_title = project
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

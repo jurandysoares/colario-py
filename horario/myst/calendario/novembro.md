@@ -1,8 +1,8 @@
-(novembro-2022)=
+(novembro-2023)=
 
-# Novembro de 2022
+# Novembro de 2023
 
-```{figure} ../imagens/calendario/2022/calendario-2022-11.svg
+```{figure} ../imagens/calendario/2023/calendario-2023-11.svg
 ---
 width: 100%
 ---

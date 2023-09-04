@@ -1,8 +1,8 @@
-(fevereiro-2023)=
+(fevereiro-2024)=
 
-# Fevereiro de 2023
+# Fevereiro de 2024
 
-```{figure} ../imagens/calendario/2022/calendario-2023-02.svg
+```{figure} ../imagens/calendario/2023/calendario-2024-02.svg
 ---
 width: 100%
 ---

@@ -1,8 +1,8 @@
-(outubro-2022)=
+(outubro-2023)=
 
-# Outubro de 2022
+# Outubro de 2023
 
-```{figure} ../imagens/calendario/2022/calendario-2022-10.svg
+```{figure} ../imagens/calendario/2023/calendario-2023-10.svg
 ---
 width: 100%
 ---
