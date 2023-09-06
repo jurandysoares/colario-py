@@ -19,7 +19,7 @@ import yaml
 
 cmd_tmpl = {
     'pdf2pdfs': 'pdfseparate {arq_pdf} {pag_pdf_padrao}',
-    'pdf2txt': 'pdftotext -layout {arq_pdf} {arq_alvo}.txt',
+    'pdf2txt': 'pdftotext {arq_pdf} {arq_alvo}.txt',
     'pdf2svg': 'pdf2svg {arq_pdf} {arq_alvo}.svg',
     'pdf2png': 'pdftoppm -png -singlefile {arq_pdf} {arq_alvo}',
 }
@@ -35,6 +35,7 @@ class MembroCategoria:
     slug: str
     nome: str
     texto_horario: str
+    termos_horario: str
     categoria: str
 
 
@@ -104,7 +105,7 @@ class FatiadorPDF:
                 
     def _separar_paginas(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            logging.info(f'Diretório temporário: {temp_dir}')
+            logging.info(f'Diretório temporário {temp_dir} criado para horários de {plural_categoria[self.categoria]}.')
             cwd = os.getcwd()
             os.chdir(temp_dir)
             cmd = cmd_tmpl["pdf2pdfs"].format(arq_pdf=self.caminho_arquivo, pag_pdf_padrao=f'{self.categoria}-%02d.pdf')
@@ -126,7 +127,6 @@ class FatiadorPDF:
                     texto = arq_txt.read()
                     linhas = texto.splitlines()
                     if self.categoria == 'professor':
-                        10 == 'Professor '
                         nome = linhas[0].strip()[10:]
                     else:
                         nome = linhas[0].strip()
@@ -136,6 +136,7 @@ class FatiadorPDF:
                         slug=slug,
                         nome=nome,
                         texto_horario=texto,
+                        termos_horario=texto.split(),
                         categoria=self.categoria
                     )
                     self.membros[slug] = novo_membro
@@ -209,13 +210,13 @@ def main():
 
     dir_www = pathlib.Path(args.diretorio_www)
 
-    assert dir_horarios.is_dir() and dir_www.is_dir()
-    assert all([arq_pdf in ls_pdf for arq_pdf in ('professor.pdf', 'sala.pdf', 'turma.pdf')])
-    assert 'index.html' in dir_www.glob('index.html')
+    # assert dir_horarios.is_dir() and dir_www.is_dir()
+    # assert all([arq_pdf in ls_pdf for arq_pdf in ('professor.pdf', 'sala.pdf', 'turma.pdf')])
+    # assert 'index.html' in dir_www.glob('index.html')
   
     os.chdir(dir_horarios)
-    if not atualizar_site(dir_horarios, dir_www):
-        sys.exit(1)
+    # if not atualizar_site(dir_horarios, dir_www):
+    #     sys.exit(1)
 
     logging.basicConfig(level=logging.INFO)
     categorias = ('professor',  'sala',  'turma')
@@ -225,6 +226,8 @@ def main():
     for formato in formatos_suportados:
         if os.path.exists(formato): 
             shutil.rmtree(formato)
+
+    global membros_categoria
 
     membros_categoria = {categoria:FatiadorPDF(categoria).membros for categoria in categorias}
 
