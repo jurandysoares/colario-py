@@ -12,14 +12,15 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import venv
+
 
 from slugify import slugify
-import tabula
 import yaml
 
 cmd_tmpl = {
     'pdf2pdfs': 'pdfseparate {arq_pdf} {pag_pdf_padrao}',
-    'pdf2txt': 'pdftotext {arq_pdf} {arq_alvo}.txt',
+    'pdf2txt': 'pdftotext -layout {arq_pdf} {arq_alvo}.txt',
     'pdf2svg': 'pdf2svg {arq_pdf} {arq_alvo}.svg',
     'pdf2png': 'pdftoppm -png -singlefile {arq_pdf} {arq_alvo}',
 }
@@ -201,14 +202,14 @@ name: fig:{self.categoria}:{slug}
 
 def main():
     ana_args = argparse.ArgumentParser()
-    ana_args.add_argument('diretorio_pdf', help='Diretório onde se encontram os arquivos PDF com horários')
-    ana_args.add_argument('diretorio_www', help='Diretório para publicação dos horários na Web')
+    ana_args.add_argument('dir_pdf', help='Diretório onde se encontram os arquivos PDF com horários')
+    ana_args.add_argument('dir_www', help='Diretório para publicação dos horários na Web')
     args = ana_args.parse_args()
 
-    dir_horarios = pathlib.Path(args.diretorio_pdf)
+    dir_horarios = pathlib.Path(args.dir_pdf)
     ls_pdf = dir_horarios.glob('*.pdf')
 
-    dir_www = pathlib.Path(args.diretorio_www)
+    dir_www = pathlib.Path(args.dir_www)
 
     # assert dir_horarios.is_dir() and dir_www.is_dir()
     # assert all([arq_pdf in ls_pdf for arq_pdf in ('professor.pdf', 'sala.pdf', 'turma.pdf')])
