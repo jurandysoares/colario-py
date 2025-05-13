@@ -112,6 +112,8 @@ class FatiadorPDF:
             cmd = cmd_tmpl["pdf2pdfs"].format(arq_pdf=self.caminho_arquivo, pag_pdf_padrao=f'{self.categoria}-%02d.pdf')
             subprocess.run(cmd.split())
 
+            logging.debug(f'Arquivos PDF de {plural_categoria[self.categoria]} separados.')
+
             arqs_pdf = glob('*.pdf')
             for ext in ('pdf', 'png', 'md', 'svg', 'txt'):
                 self._dir_ext[ext].mkdir(parents=True, exist_ok=True)
@@ -131,8 +133,14 @@ class FatiadorPDF:
                         nome = linhas[0].strip()[10:]
                     else:
                         nome = linhas[0].strip()
-                    
+
+                        # Thanks professor Henrique Coelho for reporting this bug
+                        if nome.startswith('Centro Federal'):
+                            nome = linhas[1].strip()
+
                     slug = slugify(nome)
+                    logging.debug(f'Arquivo: {nome_arq_txt}, Nome: {nome}, Slug: {slug}')
+
                     novo_membro = MembroCategoria(
                         slug=slug,
                         nome=nome,
@@ -219,9 +227,19 @@ def main():
     # if not atualizar_site(dir_horarios, dir_www):
     #     sys.exit(1)
 
-    logging.basicConfig(level=logging.INFO)
+    now = datetime.now()   
+    pid = os.getpid()
+
+    fname = f"/tmp/colario_{now.strftime('%F_%T')}_{pid}.log"
+    print(f'Arquivo de log: {fname}')
+
+    logging.basicConfig(
+        filename=fname,
+        filemode='w',
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        level=logging.DEBUG
+    )
     categorias = ('professor',  'sala',  'turma')
-    logging.basicConfig(level=logging.INFO)
 
     formatos_suportados = ('md', 'pdf', 'png', 'svg', 'txt')
     for formato in formatos_suportados:
