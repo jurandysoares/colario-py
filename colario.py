@@ -203,6 +203,12 @@ name: fig:{self.categoria}:{slug}
 ---
 ```
 
+## Baixar
+
+- [PDF](https://mange.ifrn.edu.br/horario/pdf/{campus}/{self.categoria}/{slug}.pdf)
+- [SVG](https://mange.ifrn.edu.br/horario/svg/{campus}/{self.categoria}/{slug}.svg)
+- [PNG](https://mange.ifrn.edu.br/horario/png/{campus}/{self.categoria}/{slug}.png)
+
 '''
 
                 man_arq_md.write(conteudo_md)
@@ -210,9 +216,13 @@ name: fig:{self.categoria}:{slug}
 
 def main():
     ana_args = argparse.ArgumentParser()
+    ana_args.add_argument('campus', help='Nome do campus')
     ana_args.add_argument('dir_pdf', help='Diretório onde se encontram os arquivos PDF com horários')
     ana_args.add_argument('dir_www', help='Diretório para publicação dos horários na Web')
     args = ana_args.parse_args()
+
+    global campus
+    campus = args.campus
 
     dir_horarios = pathlib.Path(args.dir_pdf)
     ls_pdf = dir_horarios.glob('*.pdf')
