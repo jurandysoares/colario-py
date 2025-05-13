@@ -1,5 +1,5 @@
+furo
 myst-parser
 python-slugify
 sphinx
 sphinx-rtd-theme
-tabula-py
