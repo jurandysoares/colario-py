@@ -206,8 +206,9 @@ name: fig:{self.categoria}:{slug}
 ## Baixar
 
 - [PDF](https://mange.ifrn.edu.br/horario/pdf/{campus}/{self.categoria}/{slug}.pdf)
-- [SVG](https://mange.ifrn.edu.br/horario/svg/{campus}/{self.categoria}/{slug}.svg)
 - [PNG](https://mange.ifrn.edu.br/horario/png/{campus}/{self.categoria}/{slug}.png)
+- [SVG](https://mange.ifrn.edu.br/horario/svg/{campus}/{self.categoria}/{slug}.svg)
+- [TXT](https://mange.ifrn.edu.br/horario/txt/{campus}/{self.categoria}/{slug}.txt)
 
 '''
 
