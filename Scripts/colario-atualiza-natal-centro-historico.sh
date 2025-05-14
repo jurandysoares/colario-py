@@ -28,7 +28,7 @@ cd ../
 # Atualiza os arquivos no formato PDF, SVG e TXT
 pwd
 
-for fmt in pdf svg txt; do
+for fmt in pdf png svg txt; do
    FMT_DEST="/var/www/html/horario/${fmt}/${CAMPUS}"
    rm -rf "${FMT_DEST}"
    mkdir -pv "${FMT_DEST}"
