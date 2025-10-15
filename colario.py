@@ -129,7 +129,12 @@ class FatiadorPDF:
                 with open(file=nome_arq_txt, mode='r', encoding='utf-8') as arq_txt:
                     texto = arq_txt.read()
                     linhas = texto.splitlines()
-                    if self.categoria == 'professor':
+                    if campus == "natal-zona-norte":
+                        if self.categoria == "professor":
+                            nome = linhas[2]
+                        else:
+                            nome = linhas[1]
+                    elif self.categoria == 'professor':
                         nome = linhas[0].strip()[10:]
                     else:
                         nome = linhas[0].strip()
@@ -221,6 +226,7 @@ def main():
     ana_args.add_argument('dir_pdf', help='Diretório onde se encontram os arquivos PDF com horários')
     ana_args.add_argument('dir_www', help='Diretório para publicação dos horários na Web')
     args = ana_args.parse_args()
+    print(args)
 
     global campus
     campus = args.campus
